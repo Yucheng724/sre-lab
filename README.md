@@ -6,7 +6,7 @@
 
 - [x] Stage 1：FastAPI 服務（`/health`、`/metrics`、可注入故障的 `/work`）
 - [x] Stage 2：Docker 化（multi-stage、非 root）
-- [ ] Stage 3：CI（GitHub Actions → GHCR）
+- [x] Stage 3：CI（GitHub Actions → GHCR）
 - [ ] Stage 4：Terraform 建立 kind 叢集並部署
 - [ ] Stage 5：Prometheus / Grafana 監控、SLO 與燃燒率告警
 - [ ] Stage 6：Helm + ArgoCD GitOps、HPA
@@ -53,3 +53,14 @@ uvicorn app.main:app --reload
 ### 踩雷紀錄
 - `docker run -d` 後立刻 curl 出現 Connection reset：容器啟動不等於服務就緒 → 之後在 K8s 以 readinessProbe 處理
 - 新電腦執行 docker 出現 permission denied：使用者需加入 docker 群組並重新登入
+
+## Stage 3：CI（GitHub Actions → GHCR）
+
+- push / PR 時執行 ruff 與 pytest；測試通過且為 push 到 main 時，才建置 image 並推送至 GHCR
+- image 同時標記 `latest` 與 commit SHA，可追溯每個版本並精準回滾
+- 使用 `GITHUB_TOKEN` 登入 GHCR，不需自行保存密碼
+
+### 踩雷紀錄
+- GHCR 要求 image 名稱全小寫，帳號含大寫字母 → 在 workflow 以 `${GITHUB_REPOSITORY,,}` 轉為小寫
+- 本機 ruff 通過、CI 卻失敗（import 排序判斷不同）→ 原因是 ruff 未固定版本、first-party 判斷依賴預設值；以 `pyproject.toml` 明確設定 `known-first-party` 並固定 ruff 版本，確保本機與 CI 一致
+- Actions 出現 Node.js 20 淘汰警告 → 升級 `actions/checkout@v5`、`actions/setup-python@v6`
