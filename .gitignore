@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.claude/settings.local.json
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+# 任何含密碼的設定
+*.secret.yaml
