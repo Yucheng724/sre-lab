@@ -21,4 +21,4 @@ def test_metrics_exposed():
 def test_root_version():
     r = client.get("/")
     assert r.status_code == 200
-    assert r.json()["version"] == "v999"  # 故意寫錯，實際應該是 "dev"
+    assert r.json()["version"] == "dev"
