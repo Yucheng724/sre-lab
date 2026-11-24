@@ -1,0 +1,9 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      APP_VERSION: local
+      ERROR_RATE: "0.1"
+      MAX_DELAY: "0.3"

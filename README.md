@@ -5,7 +5,7 @@
 ## Roadmap
 
 - [x] Stage 1：FastAPI 服務（`/health`、`/metrics`、可注入故障的 `/work`）
-- [ ] Stage 2：Docker 化（multi-stage、非 root）
+- [x] Stage 2：Docker 化（multi-stage、非 root）
 - [ ] Stage 3：CI（GitHub Actions → GHCR）
 - [ ] Stage 4：Terraform 建立 kind 叢集並部署
 - [ ] Stage 5：Prometheus / Grafana 監控、SLO 與燃燒率告警
@@ -36,3 +36,20 @@ uvicorn app.main:app --reload
 - `ssh-keygen` 誤輸入檔名導致金鑰路徑錯誤 → 預設路徑直接按 Enter
 - kind 下載網址版本號未替換，下載到 404 頁面 → 改用 GitHub API 自動取得最新版本
 - ruff 檢查出 import 排序問題（I001）→ `ruff check --fix` 自動修正
+
+## Stage 2：Docker 化
+
+| Image | 磁碟大小 | 傳輸大小 |
+|---|---|---|
+| 單階段（`python:3.12`） | 1.65 GB | 427 MB |
+| multi-stage（`python:3.12-slim`） | 203 MB | 49.1 MB |
+
+- 縮小約 88%：主要來自 slim 基底 image；multi-stage 讓 pip 快取與建置暫存不進入最終 image
+- 以非 root 使用者（UID 10001）執行，符合最小權限原則
+- HEALTHCHECK 定期呼叫 `/health`
+- 調整 COPY 順序以善用 build cache：只改程式碼時不需重裝套件
+- `compose.yaml` 可注入 10% 錯誤率與隨機延遲，驗證 20 次請求中出現 2 次 500
+
+### 踩雷紀錄
+- `docker run -d` 後立刻 curl 出現 Connection reset：容器啟動不等於服務就緒 → 之後在 K8s 以 readinessProbe 處理
+- 新電腦執行 docker 出現 permission denied：使用者需加入 docker 群組並重新登入
