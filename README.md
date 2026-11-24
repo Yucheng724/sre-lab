@@ -64,3 +64,9 @@ uvicorn app.main:app --reload
 - GHCR 要求 image 名稱全小寫，帳號含大寫字母 → 在 workflow 以 `${GITHUB_REPOSITORY,,}` 轉為小寫
 - 本機 ruff 通過、CI 卻失敗（import 排序判斷不同）→ 原因是 ruff 未固定版本、first-party 判斷依賴預設值；以 `pyproject.toml` 明確設定 `known-first-party` 並固定 ruff 版本，確保本機與 CI 一致
 - Actions 出現 Node.js 20 淘汰警告 → 升級 `actions/checkout@v5`、`actions/setup-python@v6`
+
+### 分支保護
+
+`main` 以 GitHub Ruleset 保護：所有變更必須透過 PR，且 `test` 檢查通過才能合併。下圖為故意提交錯誤測試時，PR 被擋下、無法合併的畫面：
+
+![PR 因測試失敗被擋下](docs/images/pr-blocked.png)
