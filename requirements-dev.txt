@@ -1,3 +1,3 @@
 pytest
 httpx2
-ruff
+ruff==0.17.6
