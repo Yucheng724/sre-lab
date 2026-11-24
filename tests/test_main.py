@@ -16,3 +16,9 @@ def test_metrics_exposed():
     r = client.get("/metrics")
     assert r.status_code == 200
     assert "http_requests_total" in r.text
+
+
+def test_root_version():
+    r = client.get("/")
+    assert r.status_code == 200
+    assert r.json()["version"] == "dev"
