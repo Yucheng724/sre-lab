@@ -7,7 +7,7 @@
 - [x] Stage 1：FastAPI 服務（`/health`、`/metrics`、可注入故障的 `/work`）
 - [x] Stage 2：Docker 化（multi-stage、非 root）
 - [x] Stage 3：CI（GitHub Actions → GHCR）
-- [ ] Stage 4：Terraform 建立 kind 叢集並部署
+- [x] Stage 4：Terraform 建立 kind 叢集並部署
 - [ ] Stage 5：Prometheus / Grafana 監控、SLO 與燃燒率告警
 - [ ] Stage 6：Helm + ArgoCD GitOps、HPA
 - [ ] 壓測、故障演練與 postmortem
@@ -70,3 +70,16 @@ uvicorn app.main:app --reload
 `main` 以 GitHub Ruleset 保護：所有變更必須透過 PR，且 `test` 檢查通過才能合併。下圖為故意提交錯誤測試時，PR 被擋下、無法合併的畫面：
 
 ![PR 因測試失敗被擋下](docs/images/pr-blocked.png)
+
+## Stage 4：Terraform + kind
+
+- 以 Terraform 建立 kind 叢集（1 control-plane + 1 worker），並部署 Deployment（含 readiness / liveness probe、resource limits）與 NodePort Service
+- 整套環境可一鍵重建：`terraform destroy` → `terraform apply` 約 55 秒（image 已快取；首次約 3～5 分鐘）
+- 練習變更管理：修改 replicas 時，plan 只顯示 1 個資源變更
+- Drift 偵測：以 kubectl 手動 scale 後，`terraform plan` 偵測到 `replicas 1 -> 3` 並改回
+- 使用 `plan -out` 確保套用的內容就是審核過的計畫
+- `.terraform.lock.hcl` 納入版控，固定 provider 版本
+- CI 加入 `terraform fmt -check` 與 `validate`
+
+### 踩雷紀錄
+- 將 `terraform apply` 與其他指令一起貼上，下一行被當成確認輸入而取消 → 需要確認的指令應單獨執行

@@ -10,3 +10,4 @@ __pycache__/
 terraform.tfvars
 # 任何含密碼的設定
 *.secret.yaml
+tfplan
