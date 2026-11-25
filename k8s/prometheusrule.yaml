@@ -1,0 +1,38 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: sre-lab-slo
+  namespace: sre-lab
+spec:
+  groups:
+    - name: sre-lab-slo
+      rules:
+        - record: sre_lab:error_ratio:rate5m
+          expr: |
+            sum(rate(http_requests_total{handler="/work",status="5xx"}[5m]))
+            / sum(rate(http_requests_total{handler="/work"}[5m]))
+        - record: sre_lab:error_ratio:rate1h
+          expr: |
+            sum(rate(http_requests_total{handler="/work",status="5xx"}[1h]))
+            / sum(rate(http_requests_total{handler="/work"}[1h]))
+        - alert: SreLabErrorBudgetFastBurn
+          expr: |
+            sre_lab:error_ratio:rate1h > (14.4 * 0.005)
+            and
+            sre_lab:error_ratio:rate5m > (14.4 * 0.005)
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "sre-lab /work 錯誤預算燃燒過快"
+            description: "1h 錯誤率 {{ $value | humanizePercentage }}"
+        - alert: SreLabHighLatency
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(http_request_duration_seconds_bucket{handler="/work"}[5m])) by (le)
+            ) > 0.5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "sre-lab /work p95 延遲超過 500ms"

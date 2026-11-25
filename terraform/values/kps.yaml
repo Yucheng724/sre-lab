@@ -1,0 +1,21 @@
+prometheus:
+  prometheusSpec:
+    # 讓 Prometheus 讀取「所有」ServiceMonitor／PrometheusRule，不只是本 chart 的
+    serviceMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    retention: 7d
+
+# kind 的這些元件抓不到，不關掉會一直誤報告警
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeEtcd:
+  enabled: false
+kubeProxy:
+  enabled: false
+
+# WSL 時鐘飄移造成 process_start_time 變動而誤報（實際 RESTARTS=0）
+defaultRules:
+  disabled:
+    AlertmanagerClusterCrashlooping: true
