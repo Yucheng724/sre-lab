@@ -8,7 +8,7 @@
 - [x] Stage 2：Docker 化（multi-stage、非 root）
 - [x] Stage 3：CI（GitHub Actions → GHCR）
 - [x] Stage 4：Terraform 建立 kind 叢集並部署
-- [ ] Stage 5：Prometheus / Grafana 監控、SLO 與燃燒率告警
+- [x] Stage 5：Prometheus / Grafana 監控、SLO 與燃燒率告警
 - [ ] Stage 6：Helm + ArgoCD GitOps、HPA
 - [ ] 壓測、故障演練與 postmortem
 
@@ -83,3 +83,20 @@ uvicorn app.main:app --reload
 
 ### 踩雷紀錄
 - 將 `terraform apply` 與其他指令一起貼上，下一行被當成確認輸入而取消 → 需要確認的指令應單獨執行
+
+## Stage 5：監控與 SLO
+
+- 以 Terraform（helm_release）安裝 kube-prometheus-stack：Prometheus、Grafana、Alertmanager
+- ServiceMonitor 抓取 app 的 `/metrics`；Grafana 儀表板 JSON 存於 `monitoring/dashboards/`
+- SLO：`/work` 可用性 99.5%、p95 延遲 < 500ms
+- 多視窗燃燒率告警（1h + 5m，burn rate 14.4），Alertmanager 推送至 Telegram
+- 故障演練：注入 20% 錯誤率 → Pending → Firing（Telegram 收到通知）→ 修復後約 4 分鐘 Resolved
+- 密碼與 bot token 放在 `.gitignore` 排除的檔案中，並以 `git check-ignore` 驗證；範本見 `alertmanager.example.yaml`
+
+### 踩雷紀錄
+- **告警疲勞**：接上 Telegram 後通知湧入。原因包括積壓的重試、WSL 時鐘飄移造成 `AlertmanagerClusterCrashlooping` 誤報（實際 RESTARTS=0）、未設定發送頻率 → 停用誤報規則並註明原因，設定 group_wait / group_interval / repeat_interval
+- **Telegram `chat not found`**：token 正確（否則為 401），是 chat_id 錯誤 → 先用 curl 直接呼叫 API 驗證，排除 Alertmanager 再修正
+- **沒有錯誤時儀表板顯示 No data**：沒有 5xx 時該序列不存在，運算結果仍為空 → 以 `or vector(0)` 補 0，避免誤判為監控故障
+- **p95 延遲固定約 95ms**：預設 histogram 桶子為 0.1 / 0.5 / 1 秒，所有請求落在第一格，只能內插估算 → histogram 精度取決於桶子邊界
+- **錯誤預算的滾動窗口**：前一天的演練錯誤剛好滿 24 小時後滑出 `[1d]` 窗口，預算從負值回到 100%
+- **Multi-window 的效果**：修復後 5m 窗口迅速降為 0，告警在 1h 錯誤率仍高時即解除
