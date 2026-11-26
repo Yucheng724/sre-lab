@@ -7,13 +7,14 @@ spec:
   groups:
     - name: sre-lab-slo
       rules:
+        # 沒有 5xx 時序列不存在，用 or vector(0) 補 0，避免儀表板顯示 No data
         - record: sre_lab:error_ratio:rate5m
           expr: |
-            sum(rate(http_requests_total{handler="/work",status="5xx"}[5m]))
+            (sum(rate(http_requests_total{handler="/work",status="5xx"}[5m])) or vector(0))
             / sum(rate(http_requests_total{handler="/work"}[5m]))
         - record: sre_lab:error_ratio:rate1h
           expr: |
-            sum(rate(http_requests_total{handler="/work",status="5xx"}[1h]))
+            (sum(rate(http_requests_total{handler="/work",status="5xx"}[1h])) or vector(0))
             / sum(rate(http_requests_total{handler="/work"}[1h]))
         - alert: SreLabErrorBudgetFastBurn
           expr: |
